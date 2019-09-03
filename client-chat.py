@@ -1,9 +1,18 @@
 import socket
 
-thing = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-thing.connect(('localhost', 10002))
+MSGLEN = 128
 
-line = input("> ")
-thing.send(line.encode('utf-8'))
-thing.close()
+def msg_prep(msg):
+    return msg.encode('utf-8').ljust(MSGLEN, b'\0')
+
+thing = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+thing.connect(('localhost', 10003))
+
+with thing:
+    while True:
+        line = input("> ")
+        if line == "":
+            break
+        else:
+            thing.send(msg_prep(line))
 

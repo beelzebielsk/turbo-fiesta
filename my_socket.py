@@ -11,12 +11,27 @@ class MySocket:
     port = 10003
     host = 'localhost'
     num_bytes_prefix_len = 5
-    def __init__(self, sock=None):
-        if sock is None:
+    def __init__(self, port=None, sock=None):
+        """port here is the port that the socket's listener is going
+        to listen on. I think there should be two ports because
+        there's a possibility of both people sending a message at the
+        same time.
+        """
+        if port is None and sock is None:
+            raise RuntimeError("must pass in either port or socket!")
+        elif sock is None:
             self.sock = socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.sock = sock
+        self.port = port
+
+    def __enter__(self):
+        return self.sock
+
+    def __exit__(self, type, value, traceback):
+        print("Exit method called.")
+        self.sock.close()
 
     def connect(self):
         self.sock.connect((self.host, self.port))
@@ -34,6 +49,7 @@ class MySocket:
             raise RuntimeError(f"Sent too few length bytes. Actual are {length_bytes} and of these you sent {sent}")
         if sent > self.num_bytes_prefix_len:
             raise RuntimeError(f"Sent too many length bytes. Actual are {length_bytes} and of these you sent {sent}")
+
         totalsent = 0
         while totalsent < MSGLEN:
             sent = self.sock.send(msg[totalsent:])
@@ -46,6 +62,7 @@ class MySocket:
         if len(length_bytes) < self.num_bytes_prefix_len:
             raise RuntimeError(f"Read too few bytes for length. Read {len(length_bytes)}.")
         MSGLEN = int(length_bytes.decode("utf-8"))
+
         chunks = []
         bytes_recd = 0
         while bytes_recd < MSGLEN:
@@ -55,3 +72,32 @@ class MySocket:
         chunks.append(chunk)
         bytes_recd = bytes_recd + len(chunk)
         return b''.join(chunks)
+
+# Protocol:
+# - One person starts up.
+# - 2nd person starts up.
+# - From here on in, either person should be able to send a message
+#   1st. There is no determined 1st sender, nor is there a back+forth
+#   send+reply scheme. Just two people sending messages back and
+#   forth.
+
+# Protocol:
+# - One person starts up. The create a socket that's bound to a port
+#   so that they can listen for incoming messages. They create a
+#   socket that will connect to another port so that they can speak to
+#   another person.
+# - 2nd person starts up. Does the same things that the first person
+#   does.
+# - From here on in, either person should be able to send a message
+#   1st. There is no determined 1st sender, nor is there a back+forth
+#   send+reply scheme. Just two people sending messages back and
+#   forth.
+#
+# Questions: 
+# - Aren't accepting connections and making a conncetion blocking
+#   operations? At the very least, isn't accepting blocking? 
+# - I don't think I can do this without some threading. Part of the
+#   program has to listen to the user and send messages, the other
+#   part has to listen for messages from the other user and display
+#   them.
+#

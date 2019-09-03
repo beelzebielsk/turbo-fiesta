@@ -8,24 +8,35 @@
 # Sort-of.
 
 import socket
+from my_socket import MySocket
 
-thing = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-thing.bind(('localhost', 10002))
-thing.listen(5)
+sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listener.bind(('localhost', 10003))
+listener.listen(5)
 
 def with_socket(sock):
-    chunk = sock.recv(2048)
-    print(chunk)
+    with sock:
+        while True:
+            chunk = sock.recv(MSGLEN)
+            if chunk == b'':
+                print("Empty message received, connection must be closed.")
+                break
+            else:
+                print(chunk.decode('utf-8'))
+
+
+MSGLEN = 128
 
 while True:
     print("Going to accept a connection...")
-    (clientsocket, address) = thing.accept()
+    (clientsocket, address) = listener.accept()
     print(clientsocket, address)
     with_socket(clientsocket)
-    clientsocket.close()
     print("Accepted!")
 
-thing.close()
+listener.close()
 
 # NOTES:
 # - shutdown(1) is shutdown(socket.SHUT_WR), which should mean that
