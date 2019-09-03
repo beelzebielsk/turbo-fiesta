@@ -1,18 +1,21 @@
 import socket
+from my_socket import MySocket, msg_prep, MSGLEN
 
-MSGLEN = 128
-
-def msg_prep(msg):
-    return msg.encode('utf-8').ljust(MSGLEN, b'\0')
+# Sends fixed-length messages
 
 thing = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-thing.connect(('localhost', 10003))
+thing.connect(('localhost', 10000))
 
 with thing:
     while True:
         line = input("> ")
         if line == "":
+            print("Client ended communications.")
             break
-        else:
-            thing.send(msg_prep(line))
+        thing.send(msg_prep(line))
+        chunk = thing.recv(MSGLEN)
+        if chunk == b'':
+            print("Empty msg: server ended communications.")
+            break
+        print("<", chunk.decode('utf-8'))
 

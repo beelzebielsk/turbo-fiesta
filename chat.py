@@ -8,35 +8,41 @@
 # Sort-of.
 
 import socket
-from my_socket import MySocket
+from my_socket import MySocket, msg_prep, MSGLEN
 
-sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener.bind(('localhost', 10003))
+listener.bind(('localhost', 10000))
 listener.listen(5)
 
 def with_socket(sock):
     with sock:
         while True:
+            print("Before recv...")
             chunk = sock.recv(MSGLEN)
+            print("After recv...")
             if chunk == b'':
-                print("Empty message received, connection must be closed.")
-                break
-            else:
-                print(chunk.decode('utf-8'))
+                print("Empty msg: client ended communications.")
+                return
+            print("<", chunk.decode('utf-8'))
+            line = input("> ")
+            if line == "":
+                print("Server ended communications.")
+                return
+            sock.send(msg_prep(line))
 
+# Receives fixed-length messages
 
 MSGLEN = 128
 
-while True:
-    print("Going to accept a connection...")
-    (clientsocket, address) = listener.accept()
-    print(clientsocket, address)
-    with_socket(clientsocket)
-    print("Accepted!")
-
-listener.close()
+with listener:
+    while True:
+        print("Going to accept a connection...")
+        (clientsocket, address) = listener.accept()
+        print(clientsocket, address)
+        with_socket(clientsocket)
+        print("Accepted!")
 
 # NOTES:
 # - shutdown(1) is shutdown(socket.SHUT_WR), which should mean that

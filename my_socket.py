@@ -1,5 +1,11 @@
 import socket
 
+MSGLEN = 128
+def msg_prep(msg):
+    """Takes msg as a utf-8 string (assumes msg will decode to 128 bytes or
+    less) and turns it into a length 128 byte string."""
+    return msg.encode('utf-8').ljust(MSGLEN, b'\0')
+
 class MySocket:
     """Protocol:
     - First a server socket listens on the given host and port
