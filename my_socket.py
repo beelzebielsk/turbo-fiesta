@@ -1,4 +1,7 @@
 import socket
+import sys
+import select
+import queue
 
 MSGLEN = 128
 def msg_prep(msg):
@@ -7,7 +10,10 @@ def msg_prep(msg):
     return msg.encode('utf-8').ljust(MSGLEN, b'\0')
 
 class MySocket:
-    """Protocol:
+    """
+    This is just for sockets that send messages through each other.
+    Not for setting up connections.
+    Protocol:
     - First a server program listens on the given host and port
     - Then a client program connects to the server's socket.
     - Client then creates it's own socket bound on another host and
@@ -20,23 +26,13 @@ class MySocket:
     - Each message is prefixed with the message length: 5 ascii
       characters which spell out the length as a decimal number.
     """
-    port = 10003
-    host = 'localhost'
-    num_bytes_prefix_len = 5
-    def __init__(self, port=None, sock=None):
+    def __init__(self, sock):
         """port here is the port that the socket's listener is going
         to listen on. I think there should be two ports because
         there's a possibility of both people sending a message at the
         same time.
         """
-        if port is None and sock is None:
-            raise RuntimeError("must pass in either port or socket!")
-        elif sock is None:
-            self.sock = socket.socket(
-                    socket.AF_INET, socket.SOCK_STREAM)
-        else:
-            self.sock = sock
-        self.port = port
+        self.sock = sock
 
     def __enter__(self):
         return self.sock
@@ -45,45 +41,64 @@ class MySocket:
         print("Exit method called.")
         self.sock.close()
 
-    def connect(self):
-        self.sock.connect((self.host, self.port))
-
-    def be_a_server(self):
-        self.sock.bind((self.host, self.port))
-        self.sock.listen(5)
+    def fileno(self):
+        return self.sock.fileno()
 
     def mysend(self, msg):
-        MSGLEN = len(msg)
-        # This should be no more than five characters.
-        length_bytes = str(MSGLEN).encode("utf-8")
-        sent = self.sock.send(length_bytes)
-        if sent < self.num_bytes_prefix_len:
-            raise RuntimeError(f"Sent too few length bytes. Actual are {length_bytes} and of these you sent {sent}")
-        if sent > self.num_bytes_prefix_len:
-            raise RuntimeError(f"Sent too many length bytes. Actual are {length_bytes} and of these you sent {sent}")
-
-        totalsent = 0
-        while totalsent < MSGLEN:
-            sent = self.sock.send(msg[totalsent:])
-            if sent == 0:
-                raise RuntimeError("socket connection broken")
-            totalsent = totalsent + sent
+        msg_bytes = msg_prep(msg)
+        self.sock.send(msg_bytes)
 
     def myreceive(self):
-        length_bytes = self.sock.recv(self.num_bytes_prefix_len)
-        if len(length_bytes) < self.num_bytes_prefix_len:
-            raise RuntimeError(f"Read too few bytes for length. Read {len(length_bytes)}.")
-        MSGLEN = int(length_bytes.decode("utf-8"))
-
-        chunks = []
-        bytes_recd = 0
-        while bytes_recd < MSGLEN:
-            chunk = self.sock.recv(min(MSGLEN - bytes_recd, 2048))
-        if chunk == b'':
+        msg_bytes = self.sock.recv(MSGLEN)
+        if msg_bytes == b'':
             raise RuntimeError("socket connection broken")
-        chunks.append(chunk)
-        bytes_recd = bytes_recd + len(chunk)
-        return b''.join(chunks)
+        return msg_bytes.decode('utf-8')
+
+def get_port():
+    if len(sys.argv) < 2:
+        port = int(10000)
+    else:
+        port = int(sys.argv[1])
+    return port
+
+def take_user_messages(message_queue):
+    while True:
+        # Doing this right requires moving away from just printing. If
+        # anything else prints, it prints right where the prompt left
+        # off which is confusing.
+        line = input("> ")
+        if line == "":
+            message_queue.put(None)
+            return
+        else:
+            message_queue.put(line)
+
+def get_and_send_messages(sock, message_queue):
+    with sock:
+        while True:
+            readers = [sock]
+            writers = [sock]
+            #errs = [sock]
+            timeout = 2.0 # seconds
+            readers, writers, _ = select.select(
+                    readers, writers, [], timeout)
+            if len(readers) > 0: 
+                msg = sock.myreceive()
+                if msg == b'':
+                    print("Empty msg: client ended communications.")
+                    return
+                print("<", msg)
+            if len(writers) > 0:
+                try:
+                    line = message_queue.get_nowait()
+                    if line is None:
+                        print("Server ended communications.")
+                        message_queue.task_done()
+                        return
+                    sock.mysend(line)
+                    message_queue.task_done()
+                except queue.Empty:
+                    pass
 
 # Protocol:
 # - One person starts up.

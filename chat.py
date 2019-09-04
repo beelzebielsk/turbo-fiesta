@@ -1,76 +1,27 @@
 import socket
-from my_socket import MySocket, msg_prep, MSGLEN
-import select
-import sys
+from my_socket import *
 
 # Multithreaded stuff
 import queue
 import threading
 
-def get_port():
-    if len(sys.argv) < 2:
-        port = int(10000)
-    else:
-        port = int(sys.argv[1])
-    return port
+port = get_port()
+listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listener.bind(('localhost', port))
+listener.listen(5)
+message_queue = queue.Queue()
 
-def take_user_messages(message_queue):
-    while True:
-        # Doing this right requires moving away from just printing. If
-        # anything else prints, it prints right where the prompt left
-        # off which is confusing.
-        line = input("> ")
-        if line == "":
-            message_queue.put(None)
-            return
-        else:
-            message_queue.put(line)
-
-def get_and_send_messages(sock, message_queue):
-    with sock:
-        while True:
-            readers = [sock]
-            writers = [sock]
-            #errs = [sock]
-            timeout = 2.0 # seconds
-            readers, writers, _ = select.select(
-                    readers, writers, [], timeout)
-            if len(readers) > 0: 
-                chunk = sock.recv(MSGLEN)
-                if chunk == b'':
-                    print("Empty msg: client ended communications.")
-                    return
-                print("<", chunk.decode('utf-8'))
-            if len(writers) > 0:
-                try:
-                    line = message_queue.get_nowait()
-                    if line is None:
-                        print("Server ended communications.")
-                        message_queue.task_done()
-                        return
-                    sock.send(msg_prep(line))
-                    message_queue.task_done()
-                except queue.Empty:
-                    pass
-
-if __name__ == "__main__":
-    port = get_port()
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.bind(('localhost', port))
-    listener.listen(5)
-    message_queue = queue.Queue()
-
-
-    with listener:
-        print("Going to accept a connection...")
-        (clientsocket, address) = listener.accept()
-        print("Accepted!")
-        print(clientsocket, address)
-        x = threading.Thread(target=take_user_messages,
-                args=(message_queue,))
-        y = threading.Thread(target=get_and_send_messages,
-                args=(clientsocket, message_queue))
-        x.start()
-        y.start()
-        x.join()
-        y.join()
+with listener:
+    print("Going to accept a connection...")
+    (clientsocket, address) = listener.accept()
+    print("Accepted!")
+    print(clientsocket, address)
+    clientsocket = MySocket(clientsocket)
+    x = threading.Thread(target=take_user_messages,
+            args=(message_queue,))
+    y = threading.Thread(target=get_and_send_messages,
+            args=(clientsocket, message_queue))
+    x.start()
+    y.start()
+    x.join()
+    y.join()
