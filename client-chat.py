@@ -1,21 +1,23 @@
 import socket
 from my_socket import MySocket, msg_prep, MSGLEN
 
-# Sends fixed-length messages
+# Multithreaded stuff
+import queue
+import threading
 
-thing = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-thing.connect(('localhost', 10000))
+sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sender.connect(('localhost', 10002))
+message_queue = queue.Queue()
 
-with thing:
+with sender:
     while True:
         line = input("> ")
         if line == "":
             print("Client ended communications.")
             break
-        thing.send(msg_prep(line))
-        chunk = thing.recv(MSGLEN)
+        sender.send(msg_prep(line))
+        chunk = sender.recv(MSGLEN)
         if chunk == b'':
             print("Empty msg: server ended communications.")
             break
         print("<", chunk.decode('utf-8'))
-

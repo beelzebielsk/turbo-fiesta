@@ -10,46 +10,54 @@
 import socket
 from my_socket import MySocket, msg_prep, MSGLEN
 
-# sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener.bind(('localhost', 10000))
-listener.listen(5)
+# Multithreaded stuff
+import queue
+import threading
 
-def with_socket(sock):
+listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listener.bind(('localhost', 10002))
+listener.listen(5)
+message_queue = queue.Queue()
+
+def take_user_messages():
+    while True:
+        # Doing this right requires moving away from just printing. If
+        # anything else prints, it prints right where the prompt left
+        # off which is confusing.
+        line = input("> ")
+        if line == "":
+            message_queue.put(None)
+            return
+        else:
+            message_queue.put(line)
+
+def get_and_send_messages(sock):
     with sock:
         while True:
-            print("Before recv...")
+            # print("Before recv...")
             chunk = sock.recv(MSGLEN)
-            print("After recv...")
+            # print("After recv...")
             if chunk == b'':
                 print("Empty msg: client ended communications.")
                 return
             print("<", chunk.decode('utf-8'))
-            line = input("> ")
-            if line == "":
+            line = message_queue.get()
+            if line is None:
                 print("Server ended communications.")
+                message_queue.task_done()
                 return
             sock.send(msg_prep(line))
-
-# Receives fixed-length messages
-
-MSGLEN = 128
+            message_queue.task_done()
 
 with listener:
-    while True:
-        print("Going to accept a connection...")
-        (clientsocket, address) = listener.accept()
-        print(clientsocket, address)
-        with_socket(clientsocket)
-        print("Accepted!")
-
-# NOTES:
-# - shutdown(1) is shutdown(socket.SHUT_WR), which should mean that
-#   the socket will not send, but it will still listen.
-# - When using telnet, telnet detects the server socket closing and
-#   will then terminate itself. The server would detect when a client
-#   socket closes by reading nothing, I guess. And the client would
-#   detect a closed server by... what? How did telnet do that? Did it
-#   try to read, too? I guess telnet allows for reading and writing
-#   back and forth. Both parties read and write.
+    print("Going to accept a connection...")
+    (clientsocket, address) = listener.accept()
+    print("Accepted!")
+    print(clientsocket, address)
+    x = threading.Thread(target=take_user_messages)
+    y = threading.Thread(target=get_and_send_messages,
+            args=(clientsocket,))
+    x.start()
+    y.start()
+    x.join()
+    y.join()

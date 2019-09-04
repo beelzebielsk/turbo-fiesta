@@ -8,9 +8,15 @@ def msg_prep(msg):
 
 class MySocket:
     """Protocol:
-    - First a server socket listens on the given host and port
-    - Then a client socket connects to the given host and port
-    - Huh... who sends messages and when, then?
+    - First a server program listens on the given host and port
+    - Then a client program connects to the server's socket.
+    - Client then creates it's own socket bound on another host and
+      port.
+    - Client sends message 'ready' to the server.
+    - The server then connects to the client's port.
+    - Now... there needs to be a way for each program to concurrently
+      take user messages to send and get the other program's messages
+      and display all of these on the screen.
     - Each message is prefixed with the message length: 5 ascii
       characters which spell out the length as a decimal number.
     """
