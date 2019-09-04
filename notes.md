@@ -9,3 +9,13 @@ application
   talks first, the server talks 2nd, client, server, ... etc. There's
   no way to send two messages one after another, and there's no way
   for each party to send messages at the same time.
+
+Useful Links:
+Overview of diff methods of concurrency
+https://realpython.com/python-concurrency/
+
+Intro to threading and its nitty-gritty details
+https://realpython.com/intro-to-python-threading/
+
+Documentation on context managers
+https://book.pythontips.com/en/latest/search.html?q=with+statement&check_keywords=yes&area=default#
