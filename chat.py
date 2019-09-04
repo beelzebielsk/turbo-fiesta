@@ -7,17 +7,14 @@ import sys
 import queue
 import threading
 
-if len(sys.argv) < 2:
-    port = int(10000)
-else:
-    port = int(sys.argv[1])
+def get_port():
+    if len(sys.argv) < 2:
+        port = int(10000)
+    else:
+        port = int(sys.argv[1])
+    return port
 
-listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener.bind(('localhost', port))
-listener.listen(5)
-message_queue = queue.Queue()
-
-def take_user_messages():
+def take_user_messages(message_queue):
     while True:
         # Doing this right requires moving away from just printing. If
         # anything else prints, it prints right where the prompt left
@@ -29,17 +26,15 @@ def take_user_messages():
         else:
             message_queue.put(line)
 
-def get_and_send_messages(sock):
+def get_and_send_messages(sock, message_queue):
     with sock:
         while True:
             readers = [sock]
             writers = [sock]
             #errs = [sock]
             timeout = 2.0 # seconds
-            # print("About to select...")
             readers, writers, _ = select.select(
                     readers, writers, [], timeout)
-            # print("Select finished.")
             if len(readers) > 0: 
                 chunk = sock.recv(MSGLEN)
                 if chunk == b'':
@@ -47,10 +42,8 @@ def get_and_send_messages(sock):
                     return
                 print("<", chunk.decode('utf-8'))
             if len(writers) > 0:
-                # print("About to get a line...")
                 try:
                     line = message_queue.get_nowait()
-                    # print("Got a line.")
                     if line is None:
                         print("Server ended communications.")
                         message_queue.task_done()
@@ -60,15 +53,24 @@ def get_and_send_messages(sock):
                 except queue.Empty:
                     pass
 
-with listener:
-    print("Going to accept a connection...")
-    (clientsocket, address) = listener.accept()
-    print("Accepted!")
-    print(clientsocket, address)
-    x = threading.Thread(target=take_user_messages)
-    y = threading.Thread(target=get_and_send_messages,
-            args=(clientsocket,))
-    x.start()
-    y.start()
-    x.join()
-    y.join()
+if __name__ == "__main__":
+    port = get_port()
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.bind(('localhost', port))
+    listener.listen(5)
+    message_queue = queue.Queue()
+
+
+    with listener:
+        print("Going to accept a connection...")
+        (clientsocket, address) = listener.accept()
+        print("Accepted!")
+        print(clientsocket, address)
+        x = threading.Thread(target=take_user_messages,
+                args=(message_queue,))
+        y = threading.Thread(target=get_and_send_messages,
+                args=(clientsocket, message_queue))
+        x.start()
+        y.start()
+        x.join()
+        y.join()

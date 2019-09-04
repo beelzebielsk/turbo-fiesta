@@ -9,6 +9,8 @@ application
   talks first, the server talks 2nd, client, server, ... etc. There's
   no way to send two messages one after another, and there's no way
   for each party to send messages at the same time.
+- The select call keeps returning immediately because the socket is
+  always writable. There's always some space to write.
 
 Useful Links:
 Overview of diff methods of concurrency
