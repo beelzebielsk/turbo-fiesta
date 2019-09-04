@@ -1,21 +1,13 @@
-# One chat instance runs and detects a pre-determined port to see if
-# it is open or not. If it is taken, it assumes that there's another
-# chat application listening on that part and will start trying to
-# talk with the other program through it. If it is free, then it
-# claims the port and starts listening on it.
-#
-# The first program to claim the port acts like a server, I guess.
-# Sort-of.
-
 import socket
 from my_socket import MySocket, msg_prep, MSGLEN
+import select
 
 # Multithreaded stuff
 import queue
 import threading
 
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listener.bind(('localhost', 10002))
+listener.bind(('localhost', 10000))
 listener.listen(5)
 message_queue = queue.Queue()
 
@@ -34,20 +26,33 @@ def take_user_messages():
 def get_and_send_messages(sock):
     with sock:
         while True:
-            # print("Before recv...")
-            chunk = sock.recv(MSGLEN)
-            # print("After recv...")
-            if chunk == b'':
-                print("Empty msg: client ended communications.")
-                return
-            print("<", chunk.decode('utf-8'))
-            line = message_queue.get()
-            if line is None:
-                print("Server ended communications.")
-                message_queue.task_done()
-                return
-            sock.send(msg_prep(line))
-            message_queue.task_done()
+            readers = [sock]
+            writers = [sock]
+            #errs = [sock]
+            timeout = 2.0 # seconds
+            # print("About to select...")
+            readers, writers, _ = select.select(
+                    readers, writers, [], timeout)
+            # print("Select finished.")
+            if len(readers) > 0: 
+                chunk = sock.recv(MSGLEN)
+                if chunk == b'':
+                    print("Empty msg: client ended communications.")
+                    return
+                print("<", chunk.decode('utf-8'))
+            if len(writers) > 0:
+                # print("About to get a line...")
+                try:
+                    line = message_queue.get_nowait()
+                    # print("Got a line.")
+                    if line is None:
+                        print("Server ended communications.")
+                        message_queue.task_done()
+                        return
+                    sock.send(msg_prep(line))
+                    message_queue.task_done()
+                except queue.Empty:
+                    pass
 
 with listener:
     print("Going to accept a connection...")

@@ -6,7 +6,7 @@ import queue
 import threading
 
 sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sender.connect(('localhost', 10002))
+sender.connect(('localhost', 10000))
 message_queue = queue.Queue()
 
 with sender:
