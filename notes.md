@@ -22,6 +22,9 @@ https://realpython.com/intro-to-python-threading/
 Documentation on context managers
 https://book.pythontips.com/en/latest/search.html?q=with+statement&check_keywords=yes&area=default#
 
+Details on TTYs
+https://askubuntu.com/questions/66195/what-is-a-tty-and-how-do-i-access-a-tty
+
 I have two programs talking to each other. They're a little
 asymmetric. One program has to start up first and the other one has to
 start up 2nd. And there's a single agreed-upon port that they connect
