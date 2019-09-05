@@ -2,6 +2,7 @@ import socket
 import sys
 import select
 import queue
+import argparse
 
 MSGLEN = 128
 def msg_prep(msg):
@@ -51,15 +52,26 @@ class MySocket:
     def myreceive(self):
         msg_bytes = self.sock.recv(MSGLEN)
         if msg_bytes == b'':
+            print("Empty msg: client ended communications.")
             raise RuntimeError("socket connection broken")
-        return msg_bytes.decode('utf-8')
+        return msg_bytes.rstrip(b'\0').decode('utf-8')
 
-def get_port():
-    if len(sys.argv) < 2:
-        port = int(10000)
-    else:
-        port = int(sys.argv[1])
-    return port
+def get_args():
+    """Gets the arguments for the file. Port number, and convo output
+    file name."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port",
+            help="The port number for server to listen on and client "
+            "to connect to.",
+            default=10000,
+            type=int)
+    parser.add_argument("-o", "--output-file",
+            help="The name of the file to display "
+            "to connect to.",
+            default=sys.stdout,
+            type=argparse.FileType('w'))
+    args = parser.parse_args()
+    return args.port, args.output_file
 
 def take_user_messages(message_queue):
     while True:
@@ -73,7 +85,7 @@ def take_user_messages(message_queue):
         else:
             message_queue.put(line)
 
-def get_and_send_messages(sock, message_queue):
+def get_and_send_messages(sock, message_queue, output_file):
     with sock:
         while True:
             readers = [sock]
@@ -84,10 +96,7 @@ def get_and_send_messages(sock, message_queue):
                     readers, writers, [], timeout)
             if len(readers) > 0: 
                 msg = sock.myreceive()
-                if msg == b'':
-                    print("Empty msg: client ended communications.")
-                    return
-                print("<", msg)
+                print("<", msg, file=output_file)
             if len(writers) > 0:
                 try:
                     line = message_queue.get_nowait()
@@ -96,6 +105,7 @@ def get_and_send_messages(sock, message_queue):
                         message_queue.task_done()
                         return
                     sock.mysend(line)
+                    print(">", line, file=output_file)
                     message_queue.task_done()
                 except queue.Empty:
                     pass

@@ -57,8 +57,6 @@ TODO
 
 - Change the socket communication to actually use my_socket.py and to
   support variable-length messages.
-- Add a GUI to the program so that received messages show up in a
-  different place from the message a user is trying to type.
 - Change this to a real client-server model.
 - Work on conversation history and sharing it with users.
 - Work on message ordering. What that means, how to enforce it.
