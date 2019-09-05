@@ -58,8 +58,7 @@ them in the correct order? What does "correct order" even mean?
 TODO
 ====
 
-- Change the socket communication to actually use my_socket.py and to
-  support variable-length messages.
+- Change the socket communication to support variable-length messages.
 - Change this to a real client-server model.
 - Work on conversation history and sharing it with users.
 - Work on message ordering. What that means, how to enforce it.
