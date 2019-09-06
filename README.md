@@ -11,6 +11,10 @@ Progress
   equal. One program listens for an incoming connection and the other
   program connects. There are no ways for more people to join: just
   two programs talk to each other.
+- I have a server-type program that "hosts" a chat. It takes
+  connectiosn from clients, and it receives a message from a client
+  and distrubutes them to all clients (including the sending client...
+  for now).
 
 TODO
 ====

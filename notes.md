@@ -11,6 +11,8 @@ application
   for each party to send messages at the same time.
 - The select call keeps returning immediately because the socket is
   always writable. There's always some space to write.
+- Looks like if I give select three empty lists and let it block, it
+  will block forever.
 
 Useful Links:
 Overview of diff methods of concurrency
@@ -58,7 +60,6 @@ them in the correct order? What does "correct order" even mean?
 TODO
 ====
 
-- Change this to a real client-server model.
 - Change the socket communication to support variable-length messages.
 - Work on conversation history and sharing it with users.
 - Work on message ordering. What that means, how to enforce it.
