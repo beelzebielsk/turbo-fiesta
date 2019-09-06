@@ -58,7 +58,10 @@ them in the correct order? What does "correct order" even mean?
 TODO
 ====
 
-- Change the socket communication to support variable-length messages.
 - Change this to a real client-server model.
+- Change the socket communication to support variable-length messages.
 - Work on conversation history and sharing it with users.
 - Work on message ordering. What that means, how to enforce it.
+- Change this to a p2p model, where there is no server that hosts the
+  chat, or use of servers is minimal for ancillary purposes like
+  figuring out who you can join on.
