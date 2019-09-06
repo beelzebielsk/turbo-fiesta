@@ -8,9 +8,6 @@ import queue
 import threading
 
 port, convo_file = get_args()
-# if not os.path.exists('server-convo'):
-    # os.mkfifo('server-convo')
-# convo_file = open('server-convo', 'w')
 print("\n----------", file=convo_file)
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listener.bind(('localhost', port))

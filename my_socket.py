@@ -36,7 +36,7 @@ class MySocket:
         self.sock = sock
 
     def __enter__(self):
-        return self.sock
+        return self
 
     def __exit__(self, type, value, traceback):
         print("Exit method called.")
