@@ -97,9 +97,30 @@ class GuardedDict:
 # People will be a map of uuid to tuples of (socket, nickname).
 people = GuardedList()
 unregistered_people = GuardedList()
+# Each thread will check this every time they loop to end themselves.
+end_program = False
 
-# The server has to both accept connections as people join the room
-# and listen for messages being sent from someone
+# Threads:
+# The server has to do three things simulataneously:
+# - Accept new connections
+# - Get the nickname and id of a new connection
+# - Accept sent messages and broadcast them
+#
+# The 1st two things are better done separately because I use a
+# blocking accept. I could use select instead and include listener in
+# the list of things to read off of; select would tell me when there
+# is a connection on a listening socket. But this makes things
+# complicated; now I have to check if a socket is my listener or if it
+# is an existing socket trying to send me an id and nickname.
+#
+# Handling messages is better done separately from the first two as
+# well. This could be handled as doing select on a huge list of
+# sockets which may be sending me ids, nicks, or connecting to my
+# listener, but then I'd mix different logic for different tasks all
+# in the same area just because I'm dealing with the same type of data
+# (messages from sockets). Not a good idea.
+#
+# So I make a thread for each.
 
 def accept_people():
     """Listens for incoming connections and places them in
@@ -109,6 +130,8 @@ def accept_people():
     listener.listen(5)
     with listener:
         while True:
+            if end_program:
+                return
             print("Going to accept a connection...")
             (clientsocket, address) = listener.accept()
             print("Accepted!")
@@ -156,7 +179,7 @@ def register_people():
 # whom I can't send the full message, keep track of how much I've sent
 # so far. Each time I loop through the whole list of people that I can
 # write to one at a time.
-def broadcast_message(nickname, msg):
+def broadcast_message(person, msg):
     """Takes a nickname (string), and a single message (string) and
     sends it to everyone who is in people when the function is first
     invoked."""
@@ -171,7 +194,9 @@ def broadcast_message(nickname, msg):
     # I should really be doing select to see if I can write to them. I
     # may end up blocking here.
     for recipient in readers:
-        recipient.sock.mysend(nickname)
+        if recipient is person:
+            continue
+        recipient.sock.mysend(person.nickname)
         recipient.sock.mysend(msg)
 
 def send_and_receive_messages():
@@ -205,7 +230,7 @@ def send_and_receive_messages():
                 # they arrive at the server of the time they left the
                 # client computer.
                 msg = reader.sock.myreceive()
-                broadcast_message(reader.nickname, msg)
+                broadcast_message(reader, msg)
             except RuntimeError:
                 print("Someone disconnected.")
                 with people:
@@ -216,16 +241,12 @@ registrator = threading.Thread(target=register_people)
 message_coordinator = threading.Thread(target=send_and_receive_messages)
 try:
     connector.start()
-    registrator.start()
-    message_coordinator.start()
-    # Maybe this will make sure the connection always gets closed
-    # properly.
-    connector.join()
-except Exception as e:
-    # Kill them... this is the only way I know how.
-    connector.daemon = True
     registrator.daemon = True
     message_coordinator.daemon = True
+    registrator.start()
+    message_coordinator.start()
+except Exception as e:
+    end_program = True
     raise e
 
 # Protocol:
