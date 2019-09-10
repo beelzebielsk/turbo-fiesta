@@ -57,6 +57,39 @@ the possible ways to set this chat thing up, how would each person in
 a conversation get all the messages in the correct order and display
 them in the correct order? What does "correct order" even mean?
 
+### Message Ordering
+
+For now, with a client-server architecture, the message order will be
+simple: the order in which the messages arrive to the server and are
+read from the sockets. There will be no special effort to maintain
+them in any specific order.
+
+### Conversation History
+
+The history will be stored in the message order. For now, each person
+will get the full history. The message history should also note who it
+was that said what, so each user who connects should communicate some
+ID, and perhaps a nickname.
+
+### Reading from many potential sources with select
+
+I often have a lot of people I can potentially read something from,
+and right now I assume that I always have a full+valid message I can
+read from them when they come from a select call. But this won't be
+true in general. I need a clean way to either wait until a full
+message is waiting in the socket (a way to select on messages rather
+than on data, basically) or I need to store message pieces until I get
+a full thing. Only differnce between the two is whether I handle this
+in MySocket once somehow or I handle it externally somewhere.
+
+I have a similar trouble with writing to many potential sources with
+select. It would be nice to write whatever parts of a message that I
+can write at any given time rather than assume that I can write all of
+a message immediately.
+
+Note that I probably won't see these problems until I exposed this
+program to heavy load or slow connections.
+
 TODO
 ====
 
@@ -66,3 +99,42 @@ TODO
 - Change this to a p2p model, where there is no server that hosts the
   chat, or use of servers is minimal for ancillary purposes like
   figuring out who you can join on.
+
+```
+Server:
+Check if unregistered_people is empty...
+Wait for unregistered_people to not be empty.
+Going to accept a connection...
+Accepted!
+<socket.socket fd=4, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=
+('127.0.0.1', 10002), raddr=('127.0.0.1', 33558)> ('127.0.0.1', 33558)
+Going to accept a connection...
+unregistered_people is not empty!
+Accepted!
+<socket.socket fd=5, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=
+('127.0.0.1', 10002), raddr=('127.0.0.1', 33560)> ('127.0.0.1', 33560)
+Going to accept a connection...
+Registering top with identity 2dbcebcee4bf428ba5f9bb5706573850
+Check if unregistered_people is empty...
+Copying people...
+Number of people: 1
+Number of redable sockets: 1
+Registering sir with identity hi
+
+Client "top":
+nickname: top
+> hi
+> there
+> sir
+>
+
+Client "bottom":
+nickname: bottom
+> hello
+> to
+> you too
+
+```
+
+Woah. That is a serious bug. It looks like one person get registered
+twice. How did that happen? See if you can reproduce this.

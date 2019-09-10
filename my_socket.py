@@ -95,8 +95,9 @@ def get_and_send_messages(sock, message_queue, output_file):
             readers, writers, _ = select.select(
                     readers, writers, [], timeout)
             if len(readers) > 0: 
+                nick = sock.myreceive()
                 msg = sock.myreceive()
-                print("<", msg, file=output_file)
+                print(f"{nick}: {msg}", file=output_file)
             if len(writers) > 0:
                 try:
                     line = message_queue.get_nowait()
@@ -110,26 +111,15 @@ def get_and_send_messages(sock, message_queue, output_file):
                 except queue.Empty:
                     pass
 
-# Protocol:
-# - One person starts up.
-# - 2nd person starts up.
-# - From here on in, either person should be able to send a message
-#   1st. There is no determined 1st sender, nor is there a back+forth
-#   send+reply scheme. Just two people sending messages back and
-#   forth.
+class Person:
+    def __init__(self, _id, nickname, sock):
+        self.id = _id
+        self.nickname = nickname
+        self.sock = sock
 
-# Protocol:
-# - One person starts up. The create a socket that's bound to a port
-#   so that they can listen for incoming messages. They create a
-#   socket that will connect to another port so that they can speak to
-#   another person.
-# - 2nd person starts up. Does the same things that the first person
-#   does.
-# - From here on in, either person should be able to send a message
-#   1st. There is no determined 1st sender, nor is there a back+forth
-#   send+reply scheme. Just two people sending messages back and
-#   forth.
-#
+    def fileno(self):
+        return self.sock.fileno()
+
 # Questions: 
 # - Aren't accepting connections and making a conncetion blocking
 #   operations? At the very least, isn't accepting blocking? 
