@@ -85,7 +85,7 @@ def take_user_messages(message_queue):
         else:
             message_queue.put(line)
 
-def get_and_send_messages(sock, message_queue, output_file):
+def get_and_send_messages(sock, message_queue, nickname, output_file):
     with sock:
         while True:
             readers = [sock]
@@ -106,7 +106,7 @@ def get_and_send_messages(sock, message_queue, output_file):
                         message_queue.task_done()
                         return
                     sock.mysend(line)
-                    print(">", line, file=output_file)
+                    print(f"{nickname}: {line}", file=output_file)
                     message_queue.task_done()
                 except queue.Empty:
                     pass

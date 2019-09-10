@@ -19,13 +19,13 @@ with sender, convo_file:
     sender.mysend(my_id.hex)
     # NOTE: Keep the two messages spaced apart by slow user IO for
     # now. I think this causes bugs to appear in the server.
-    nick = input("nickname: ")
-    print(f"Going to connect with id '{my_id.hex}' and nick '{nick}'")
-    sender.mysend(nick)
+    nickname = input("nickname: ")
+    print(f"Going to connect with id '{my_id.hex}' and nickname '{nickname}'")
+    sender.mysend(nickname)
     x = threading.Thread(target=take_user_messages,
             args=(message_queue,))
     y = threading.Thread(target=get_and_send_messages,
-            args=(sender, message_queue, convo_file))
+            args=(sender, message_queue, nickname, convo_file))
     x.start()
     y.start()
     x.join()
