@@ -33,3 +33,22 @@ client-server models
   significantly? What if a message claims it came from 3 hours ago? Am
   I going to have to handle re-printing 3 hours worth of messages for
   everyone that could have seen the message? Skip it?
+
+Use
+===
+
+![Example Usage](./usage.gif)
+
+1. Start up `server-chat.py`. If you need to pick a different port for
+   it, you can pass `-p {port}` to it. This is the port that the
+   server will listen for connections on.
+2. Start up instances of `client-chat.py`. Make sure to pass the same
+   `-p {port}` to them as you did to the server, as this port is the
+   port they'll connect to. The client has to connect to the port that
+   the server is listening on.
+    - If you want to store the conversation history in a file rather
+      than having the chat messages display in the same terminal where
+      the user types in messages, you can pass in `-o {filename}`.
+    - If you want to display the conversation history in different
+      terminal window (a different tty), you can pass the filename of
+      a tty as an argument. The above image has an example of that.

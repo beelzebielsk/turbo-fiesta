@@ -13,6 +13,8 @@ application
   always writable. There's always some space to write.
 - Looks like if I give select three empty lists and let it block, it
   will block forever.
+- I am not sure how to guarantee that the listening socket is closed.
+  I'm using context managers, but somehow that seems to be skipped.
 
 Useful Links:
 Overview of diff methods of concurrency
